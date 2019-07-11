@@ -1,0 +1,104 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Kleinschmidt <jkleinsc@github.com>
+Date: Thu, 11 Jul 2019 11:49:20 -0500
+Subject: fix: use WeakPtr to detect deletion
+
+
+diff --git a/ui/compositor/callback_layer_animation_observer.cc b/ui/compositor/callback_layer_animation_observer.cc
+index 639caf4d1411b867a31ce29e6c6ec4ae846359a8..dcd36d977facf13ed18e1e4d4ed854fddfd70625 100644
+--- a/ui/compositor/callback_layer_animation_observer.cc
++++ b/ui/compositor/callback_layer_animation_observer.cc
+@@ -22,7 +22,8 @@ CallbackLayerAnimationObserver::CallbackLayerAnimationObserver(
+     AnimationStartedCallback animation_started_callback,
+     AnimationEndedCallback animation_ended_callback)
+     : animation_started_callback_(animation_started_callback),
+-      animation_ended_callback_(animation_ended_callback) {}
++      animation_ended_callback_(animation_ended_callback),
++      weak_factory_(this) {}
+ 
+ CallbackLayerAnimationObserver::CallbackLayerAnimationObserver(
+     AnimationStartedCallback animation_started_callback,
+@@ -30,30 +31,27 @@ CallbackLayerAnimationObserver::CallbackLayerAnimationObserver(
+     : animation_started_callback_(animation_started_callback),
+       animation_ended_callback_(base::Bind(
+           &CallbackLayerAnimationObserver::DummyAnimationEndedCallback,
+-          should_delete_observer)) {}
++          should_delete_observer)),
++      weak_factory_(this) {}
+ 
+ CallbackLayerAnimationObserver::CallbackLayerAnimationObserver(
+     AnimationEndedCallback animation_ended_callback)
+     : animation_started_callback_(base::Bind(
+           &CallbackLayerAnimationObserver::DummyAnimationStartedCallback)),
+-      animation_ended_callback_(animation_ended_callback) {}
++      animation_ended_callback_(animation_ended_callback),
++      weak_factory_(this) {}
+ 
+-CallbackLayerAnimationObserver::~CallbackLayerAnimationObserver() {
+-  if (destroyed_)
+-    *destroyed_ = true;
+-}
++CallbackLayerAnimationObserver::~CallbackLayerAnimationObserver() {}
+ 
+ void CallbackLayerAnimationObserver::SetActive() {
+   active_ = true;
+ 
+-  bool destroyed = false;
+-  destroyed_ = &destroyed;
++  base::WeakPtr<CallbackLayerAnimationObserver> thisWeak = weak_factory_.GetWeakPtr();
+ 
+   CheckAllSequencesStarted();
+ 
+-  if (destroyed)
++  if (!thisWeak)
+     return;
+-  destroyed_ = nullptr;
+ 
+   CheckAllSequencesCompleted();
+ }
+@@ -110,19 +108,16 @@ void CallbackLayerAnimationObserver::CheckAllSequencesStarted() {
+ void CallbackLayerAnimationObserver::CheckAllSequencesCompleted() {
+   if (active_ && GetNumSequencesCompleted() == attached_sequence_count_) {
+     active_ = false;
+-    bool destroyed = false;
+-    destroyed_ = &destroyed;
+-
++    base::WeakPtr<CallbackLayerAnimationObserver> thisWeak = weak_factory_.GetWeakPtr();
+     bool should_delete = animation_ended_callback_.Run(*this);
+ 
+-    if (destroyed) {
++    if (!thisWeak) {
+       if (should_delete)
+         LOG(WARNING) << "CallbackLayerAnimationObserver was explicitly "
+                         "destroyed AND was requested to be destroyed via the "
+                         "AnimationEndedCallback's return value.";
+       return;
+     }
+-    destroyed_ = nullptr;
+ 
+     if (should_delete)
+       delete this;
+diff --git a/ui/compositor/callback_layer_animation_observer.h b/ui/compositor/callback_layer_animation_observer.h
+index fc631cc21ccc83a74955cd1af8bf43b879b6bc80..5a5f5623fa0d2c14a9893f03610d47da07e516bb 100644
+--- a/ui/compositor/callback_layer_animation_observer.h
++++ b/ui/compositor/callback_layer_animation_observer.h
+@@ -10,6 +10,7 @@
+ #include "ui/compositor/compositor_export.h"
+ #include "ui/compositor/layer_animation_observer.h"
+ 
++
+ namespace ui {
+ 
+ class LayerAnimationSequence;
+@@ -167,9 +168,9 @@ class COMPOSITOR_EXPORT CallbackLayerAnimationObserver
+   // The callback to invoke once all the animation sequences have finished.
+   AnimationEndedCallback animation_ended_callback_;
+ 
+-  // Set to true in the destructor (if non-NULL). Used to detect deletion while
++  // Used to detect deletion while
+   // calling out.
+-  bool* destroyed_ = nullptr;
++  base::WeakPtrFactory<CallbackLayerAnimationObserver> weak_factory_;
+ 
+   DISALLOW_COPY_AND_ASSIGN(CallbackLayerAnimationObserver);
+ };
