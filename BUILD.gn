@@ -1018,6 +1018,7 @@ if (is_mac) {
         ":crashpad_handler_syms",
         ":electron_app_syms",
         ":electron_framework_syms",
+        ":electron_helper_app",
         ":electron_helper_syms",
         ":swiftshader_egl_syms",
         ":swiftshader_gles_syms",
