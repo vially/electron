@@ -106,7 +106,7 @@
 - (void)setTitle:(NSString*)title {
   if ([title containsANSICodes]) {
     [[statusItem_ button]
-        setAttributedTitle:[[title copy] attributedStringParsingANSICodes]];
+        setAttributedTitle:[title attributedStringParsingANSICodes]];
   } else {
     [[statusItem_ button] setTitle:[title copy]];
   }
