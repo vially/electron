@@ -56,6 +56,7 @@ class NotifyIcon : public TrayIcon {
   void SetPressedImage(HICON image) override;
   void SetToolTip(const std::string& tool_tip) override;
   void DisplayBalloon(HICON icon,
+                      bool large_icon,
                       const base::string16& title,
                       const base::string16& contents) override;
   void PopUpContextMenu(const gfx::Point& pos,

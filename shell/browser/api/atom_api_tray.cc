@@ -197,10 +197,14 @@ void Tray::DisplayBalloon(mate::Arguments* args,
     return;
   }
 
+  bool large_icon = false;
+  options.Get("largeIcon", &large_icon);
+
 #if defined(OS_WIN)
   tray_icon_->DisplayBalloon(
-      icon.IsEmpty() ? NULL : icon->GetHICON(GetSystemMetrics(SM_CXSMICON)),
-      title, content);
+      auto icon_size = large_icon ? GetSystemMetrics(SM_CXICON)
+                                  : GetSystemMetrics(SM_CXSMICON);
+      icon.IsEmpty() ? NULL : icon->GetHICON(icon_size), title, content);
 #else
   tray_icon_->DisplayBalloon(icon.IsEmpty() ? gfx::Image() : icon->image(),
                              title, content);

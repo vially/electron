@@ -60,6 +60,7 @@ class TrayIcon {
   // Displays a notification balloon with the specified contents.
   // Depending on the platform it might not appear by the icon tray.
   virtual void DisplayBalloon(ImageType icon,
+                              bool large_icon,
                               const base::string16& title,
                               const base::string16& contents);
 

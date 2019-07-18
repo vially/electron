@@ -15,6 +15,7 @@ void TrayIcon::SetPressedImage(ImageType image) {}
 void TrayIcon::SetHighlightMode(TrayIcon::HighlightMode mode) {}
 
 void TrayIcon::DisplayBalloon(ImageType icon,
+                              bool large_icon,
                               const base::string16& title,
                               const base::string16& contents) {}
 
