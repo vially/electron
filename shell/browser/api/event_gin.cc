@@ -10,7 +10,7 @@
 
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/web_contents.h"
-#include "gin/object_template_builder.h"
+#include "native_mate/object_template_builder_gin.h"
 #include "shell/common/gin_converters/value_converter_gin.h"
 // TODO(deermichel): needed?
 // #include "shell/common/native_mate_converters/string16_converter.h"

@@ -11,7 +11,7 @@
 #include "content/public/browser/browser_task_traits.h"
 #include "content/public/browser/browser_thread.h"
 #include "gin/dictionary.h"
-#include "gin/object_template_builder.h"
+// #include "native_mate/object_template_builder_gin.h"
 #include "shell/browser/atom_browser_context.h"
 #include "shell/browser/net/atom_network_delegate.h"
 #include "shell/common/gin_converters/net_converter_gin.h"
@@ -118,29 +118,29 @@ gin::Handle<WebRequest> WebRequest::Create(
 void WebRequest::BuildPrototype(v8::Isolate* isolate,
                                 v8::Local<v8::FunctionTemplate> prototype) {
   prototype->SetClassName(gin::StringToV8(isolate, "WebRequest"));
-  gin::ObjectTemplateBuilder(isolate, prototype->PrototypeTemplate())
-      .SetMethod("onBeforeRequest", &WebRequest::SetResponseListener<
-                                        AtomNetworkDelegate::kOnBeforeRequest>)
-      .SetMethod("onBeforeSendHeaders",
-                 &WebRequest::SetResponseListener<
-                     AtomNetworkDelegate::kOnBeforeSendHeaders>)
-      .SetMethod("onHeadersReceived",
-                 &WebRequest::SetResponseListener<
-                     AtomNetworkDelegate::kOnHeadersReceived>)
-      .SetMethod(
-          "onSendHeaders",
-          &WebRequest::SetSimpleListener<AtomNetworkDelegate::kOnSendHeaders>)
-      .SetMethod("onBeforeRedirect",
-                 &WebRequest::SetSimpleListener<
-                     AtomNetworkDelegate::kOnBeforeRedirect>)
-      .SetMethod("onResponseStarted",
-                 &WebRequest::SetSimpleListener<
-                     AtomNetworkDelegate::kOnResponseStarted>)
-      .SetMethod(
-          "onCompleted",
-          &WebRequest::SetSimpleListener<AtomNetworkDelegate::kOnCompleted>)
-      .SetMethod("onErrorOccurred", &WebRequest::SetSimpleListener<
-                                        AtomNetworkDelegate::kOnErrorOccurred>);
+  // gin::ObjectTemplateBuilder(isolate, prototype->PrototypeTemplate())
+  //     .SetMethod("onBeforeRequest", &WebRequest::SetResponseListener<
+  //                                       AtomNetworkDelegate::kOnBeforeRequest>)
+  //     .SetMethod("onBeforeSendHeaders",
+  //                &WebRequest::SetResponseListener<
+  //                    AtomNetworkDelegate::kOnBeforeSendHeaders>)
+  //     .SetMethod("onHeadersReceived",
+  //                &WebRequest::SetResponseListener<
+  //                    AtomNetworkDelegate::kOnHeadersReceived>)
+  //     .SetMethod(
+  //         "onSendHeaders",
+  //         &WebRequest::SetSimpleListener<AtomNetworkDelegate::kOnSendHeaders>)
+  //     .SetMethod("onBeforeRedirect",
+  //                &WebRequest::SetSimpleListener<
+  //                    AtomNetworkDelegate::kOnBeforeRedirect>)
+  //     .SetMethod("onResponseStarted",
+  //                &WebRequest::SetSimpleListener<
+  //                    AtomNetworkDelegate::kOnResponseStarted>)
+  //     .SetMethod(
+  //         "onCompleted",
+  //         &WebRequest::SetSimpleListener<AtomNetworkDelegate::kOnCompleted>)
+  //     .SetMethod("onErrorOccurred", &WebRequest::SetSimpleListener<
+  //                                       AtomNetworkDelegate::kOnErrorOccurred>);
 }
 
 }  // namespace api

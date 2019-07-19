@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#include "native_mate/handle.h"
-#include "shell/browser/api/event_emitter.h"
+#include "gin/handle.h"
+#include "shell/browser/api/event_emitter_gin.h"
 #include "ui/display/display_observer.h"
 #include "ui/display/screen.h"
 
@@ -22,7 +22,7 @@ namespace electron {
 
 namespace api {
 
-class Screen : public mate::EventEmitter<Screen>,
+class Screen : public gin::EventEmitter<Screen>,
                public display::DisplayObserver {
  public:
   static v8::Local<v8::Value> Create(v8::Isolate* isolate);

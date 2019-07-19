@@ -11,7 +11,7 @@
 #include "content/public/browser/render_frame_host.h"
 #include "gin/arguments.h"
 #include "gin/dictionary.h"
-#include "gin/object_template_builder.h"
+#include "native_mate/object_template_builder_gin.h"
 #include "shell/browser/api/event_gin.h"
 #include "shell/common/node_includes.h"
 #include "ui/events/event_constants.h"

@@ -8,11 +8,12 @@
 #include <string>
 
 #include "base/bind.h"
-#include "native_mate/dictionary.h"
-#include "native_mate/object_template_builder.h"
+#include "gin/dictionary.h"
+#include "native_mate/object_template_builder_gin.h"
 #include "shell/browser/api/atom_api_browser_window.h"
 #include "shell/browser/browser.h"
-#include "shell/common/native_mate_converters/gfx_converter.h"
+#include "shell/common/gin_converters/callback_gin.h"
+#include "shell/common/gin_converters/gfx_converter_gin.h"
 #include "shell/common/node_includes.h"
 #include "ui/display/display.h"
 #include "ui/display/screen.h"
@@ -54,14 +55,14 @@ std::vector<std::string> MetricsToArray(uint32_t metrics) {
 void DelayEmit(Screen* screen,
                const base::StringPiece& name,
                const display::Display& display) {
-  screen->Emit(name, display);
+  // screen->Emit(name, display);
 }
 
 void DelayEmitWithMetrics(Screen* screen,
                           const base::StringPiece& name,
                           const display::Display& display,
                           const std::vector<std::string>& metrics) {
-  screen->Emit(name, display, metrics);
+  // screen->Emit(name, display, metrics);
 }
 
 }  // namespace
@@ -135,7 +136,7 @@ void Screen::OnDisplayMetricsChanged(const display::Display& display,
 // static
 v8::Local<v8::Value> Screen::Create(v8::Isolate* isolate) {
   if (!Browser::Get()->is_ready()) {
-    isolate->ThrowException(v8::Exception::Error(mate::StringToV8(
+    isolate->ThrowException(v8::Exception::Error(gin::StringToV8(
         isolate,
         "The 'screen' module can't be used before the app 'ready' event")));
     return v8::Null(isolate);
@@ -144,18 +145,18 @@ v8::Local<v8::Value> Screen::Create(v8::Isolate* isolate) {
   display::Screen* screen = display::Screen::GetScreen();
   if (!screen) {
     isolate->ThrowException(v8::Exception::Error(
-        mate::StringToV8(isolate, "Failed to get screen information")));
+        gin::StringToV8(isolate, "Failed to get screen information")));
     return v8::Null(isolate);
   }
 
-  return mate::CreateHandle(isolate, new Screen(isolate, screen)).ToV8();
+  return gin::CreateHandle(isolate, new Screen(isolate, screen)).ToV8();
 }
 
 // static
 void Screen::BuildPrototype(v8::Isolate* isolate,
                             v8::Local<v8::FunctionTemplate> prototype) {
-  prototype->SetClassName(mate::StringToV8(isolate, "Screen"));
-  mate::ObjectTemplateBuilder(isolate, prototype->PrototypeTemplate())
+  prototype->SetClassName(gin::StringToV8(isolate, "Screen"));
+  gin::ObjectTemplateBuilder(isolate, prototype->PrototypeTemplate())
       .SetMethod("getCursorScreenPoint", &Screen::GetCursorScreenPoint)
       .SetMethod("getPrimaryDisplay", &Screen::GetPrimaryDisplay)
       .SetMethod("getAllDisplays", &Screen::GetAllDisplays)
@@ -182,7 +183,7 @@ void Initialize(v8::Local<v8::Object> exports,
                 v8::Local<v8::Context> context,
                 void* priv) {
   v8::Isolate* isolate = context->GetIsolate();
-  mate::Dictionary dict(isolate, exports);
+  gin::Dictionary dict(isolate, exports);
   dict.Set("createScreen", base::BindRepeating(&Screen::Create, isolate));
   dict.Set(
       "Screen",
