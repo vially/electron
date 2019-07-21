@@ -98,12 +98,12 @@ void BrowserView::WebContentsDestroyed() {
 // static
 mate::WrappableBase* BrowserView::New(mate::Arguments* args) {
   if (!Browser::Get()->is_ready()) {
-    args->ThrowError("Cannot create BrowserView before app is ready");
+    args->ThrowError("BrowserView can't be created before app is ready.");
     return nullptr;
   }
 
   if (args->Length() > 1) {
-    args->ThrowError("Too many arguments");
+    args->ThrowError("Too many arguments specified.");
     return nullptr;
   }
 
