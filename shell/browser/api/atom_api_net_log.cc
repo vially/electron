@@ -63,7 +63,7 @@ NetLog::~NetLog() = default;
 v8::Local<v8::Promise> NetLog::StartLogging(mate::Arguments* args) {
   base::FilePath log_path;
   if (!args->GetNext(&log_path) || log_path.empty()) {
-    args->ThrowTypeError("'path' argument must be a valid string.");
+    args->ThrowTypeError("'path' parameter must be a valid string.");
     return v8::Local<v8::Promise>();
   }
 
