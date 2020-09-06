@@ -123,3 +123,4 @@ ui_check_that_unpremultiply_is_passed_a_32bpp_image.patch
 cherry-pick-ecdec1fb0f42.patch
 merge_m86_ensure_that_buffers_used_by_imagedecoder_haven_t_been.patch
 fix_setparentacessibile_crash_win.patch
+fix_dom_distiller_js_shebang_to_use_python_2.patch
