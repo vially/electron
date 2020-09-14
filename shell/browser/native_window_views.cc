@@ -501,15 +501,11 @@ void NativeWindowViews::SetEnabledInternal(bool enable) {
 
 #if defined(OS_LINUX)
 void NativeWindowViews::Maximize() {
-#if defined(USE_OZONE)
-  NOTIMPLEMENTED();
-#else
   if (IsVisible())
     widget()->Maximize();
   else
     widget()->native_widget_private()->Show(ui::SHOW_STATE_MAXIMIZED,
                                             gfx::Rect());
-#endif
 }
 #endif
 
@@ -833,12 +829,7 @@ bool NativeWindowViews::IsClosable() {
   }
   return !(info.fState & MFS_DISABLED);
 #elif defined(OS_LINUX)
-#if defined(USE_OZONE)
-  NOTIMPLEMENTED();
-  return false;
-#else
   return true;
-#endif
 #endif
 }
 
@@ -1423,12 +1414,7 @@ bool NativeWindowViews::CanMinimize() const {
 #if defined(OS_WIN)
   return minimizable_;
 #elif defined(OS_LINUX)
-#if defined(USE_OZONE)
-  NOTIMPLEMENTED();
-  return false;
-#else
   return true;
-#endif
 #endif
 }
 
