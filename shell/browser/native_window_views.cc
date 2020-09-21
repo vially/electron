@@ -192,7 +192,7 @@ NativeWindowViews::NativeWindowViews(const gin_helper::Dictionary& options,
     params.parent = parent->GetNativeWindow();
 
   params.native_widget = new ElectronDesktopNativeWidgetAura(this);
-#elif defined(USE_X11)
+#elif defined(OS_LINUX)
   std::string name = Browser::Get()->GetName();
   // Set WM_WINDOW_ROLE.
   params.wm_role_name = "browser-window";
@@ -482,7 +482,7 @@ void NativeWindowViews::SetEnabledInternal(bool enable) {
 #endif
 }
 
-#if defined(USE_X11)
+#if defined(OS_LINUX)
 void NativeWindowViews::Maximize() {
   if (IsVisible())
     widget()->Maximize();
@@ -798,7 +798,7 @@ bool NativeWindowViews::IsClosable() {
     return false;
   }
   return !(info.fState & MFS_DISABLED);
-#elif defined(USE_X11)
+#elif defined(OS_LINUX)
   return true;
 #endif
 }
@@ -1137,7 +1137,7 @@ void NativeWindowViews::SetProgressBar(double progress,
                                        NativeWindow::ProgressState state) {
 #if defined(OS_WIN)
   taskbar_host_.SetProgressBar(GetAcceleratedWidget(), progress, state);
-#elif defined(USE_X11)
+#elif defined(OS_LINUX)
   if (unity::IsRunning()) {
     unity::SetProgressFraction(progress);
   }
@@ -1193,7 +1193,7 @@ content::DesktopMediaID NativeWindowViews::GetDesktopMediaID() const {
 #if defined(OS_WIN)
   window_handle =
       reinterpret_cast<content::DesktopMediaID::Id>(accelerated_widget);
-#elif defined(USE_X11)
+#elif defined(OS_LINUX)
   window_handle = static_cast<uint32_t>(accelerated_widget);
 #endif
   aura::WindowTreeHost* const host =
@@ -1296,7 +1296,7 @@ void NativeWindowViews::SetIcon(HICON window_icon, HICON app_icon) {
   SendMessage(hwnd, WM_SETICON, ICON_BIG,
               reinterpret_cast<LPARAM>(app_icon_.get()));
 }
-#elif defined(USE_X11)
+#elif defined(OS_LINUX)
 void NativeWindowViews::SetIcon(const gfx::ImageSkia& icon) {
   auto* tree_host = views::DesktopWindowTreeHostLinux::GetHostForWidget(
       GetAcceleratedWidget());
@@ -1381,7 +1381,7 @@ bool NativeWindowViews::CanMaximize() const {
 bool NativeWindowViews::CanMinimize() const {
 #if defined(OS_WIN)
   return minimizable_;
-#elif defined(USE_X11)
+#elif defined(OS_LINUX)
   return true;
 #endif
 }
