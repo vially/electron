@@ -22,6 +22,10 @@
 #include "ui/events/event_constants.h"
 #include "ui/events/keycodes/keyboard_code_conversion_x.h"
 
+#if defined(USE_OZONE) || defined(USE_X11)
+#include "ui/base/ui_base_features.h"
+#endif
+
 namespace electron {
 
 namespace gtkui {
@@ -222,12 +226,15 @@ void BuildSubmenuFromModel(ui::MenuModel* model,
     }
 
 #if defined(USE_X11)
-    ui::Accelerator accelerator;
-    if (model->GetAcceleratorAt(i, &accelerator)) {
-      gtk_widget_add_accelerator(menu_item, "activate", nullptr,
-                                 GetGdkKeyCodeForAccelerator(accelerator),
-                                 GetGdkModifierForAccelerator(accelerator),
-                                 GTK_ACCEL_VISIBLE);
+    // TODO(vially): Investigate if this can be shared with Ozone
+    if (!features::IsUsingOzonePlatform()) {
+      ui::Accelerator accelerator;
+      if (model->GetAcceleratorAt(i, &accelerator)) {
+        gtk_widget_add_accelerator(menu_item, "activate", nullptr,
+                                   GetGdkKeyCodeForAccelerator(accelerator),
+                                   GetGdkModifierForAccelerator(accelerator),
+                                   GTK_ACCEL_VISIBLE);
+      }
     }
 #endif
 

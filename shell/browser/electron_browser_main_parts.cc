@@ -60,21 +60,33 @@
 #include "ui/wm/core/wm_state.h"
 #endif
 
-#if defined(USE_X11)
+#if defined(OS_LINUX)
 #include "base/environment.h"
 #include "base/nix/xdg_util.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "ui/gtk/gtk_ui.h"
+#include "ui/gtk/gtk_ui_delegate.h"
+#include "ui/gtk/gtk_util.h"
+#include "ui/views/linux_ui/linux_ui.h"
+
+#if defined(USE_OZONE)
+#include "ui/ozone/public/ozone_platform.h"
+#endif
+
+#if defined(USE_X11)
 #include "ui/base/x/x11_error_handler.h"
 #include "ui/base/x/x11_util.h"
 #include "ui/events/devices/x11/touch_factory_x11.h"
 #include "ui/gfx/color_utils.h"
 #include "ui/gfx/x/x11_types.h"
 #include "ui/gfx/x/xproto_util.h"
-#include "ui/gtk/gtk_ui.h"
-#include "ui/gtk/gtk_ui_delegate.h"
-#include "ui/gtk/gtk_util.h"
 #include "ui/gtk/x/gtk_ui_delegate_x11.h"
-#include "ui/views/linux_ui/linux_ui.h"
+#endif
+
+#if defined(USE_OZONE) || defined(USE_X11)
+#include "ui/base/ui_base_features.h"
+#endif
+
 #endif
 
 #if defined(OS_WIN)
@@ -238,11 +250,15 @@ int ElectronBrowserMainParts::PreEarlyInitialization() {
   OverrideLinuxAppDataPath();
 #endif
 
-#if defined(USE_X11)
-  // Installs the X11 error handlers for the browser process used during
-  // startup. They simply print error messages and exit because
-  // we can't shutdown properly while creating and initializing services.
-  ui::SetNullErrorHandlers();
+#if defined(USE_OZONE) || defined(USE_X11)
+  if (features::IsUsingOzonePlatform()) {
+    ui::OzonePlatform::PreEarlyInitialization();
+  } else {
+    // Installs the X11 error handlers for the browser process used during
+    // startup. They simply print error messages and exit because
+    // we can't shutdown properly while creating and initializing services.
+    ui::SetNullErrorHandlers();
+  }
 #endif
 
 #if defined(OS_POSIX)
@@ -348,12 +364,16 @@ void ElectronBrowserMainParts::PostDestroyThreads() {
 }
 
 void ElectronBrowserMainParts::ToolkitInitialized() {
+#if defined(OS_LINUX)
 #if defined(USE_X11)
-  // In Aura/X11, Gtk-based LinuxUI implementation is used.
-  gtk_ui_delegate_ =
-      std::make_unique<ui::GtkUiDelegateX11>(x11::Connection::Get());
-  ui::GtkUiDelegate::SetInstance(gtk_ui_delegate_.get());
-  views::LinuxUI* linux_ui = BuildGtkUi(gtk_ui_delegate_.get());
+  if (!features::IsUsingOzonePlatform()) {
+    // In Aura/X11, Gtk-based LinuxUI implementation is used.
+    gtk_ui_delegate_ =
+        std::make_unique<ui::GtkUiDelegateX11>(x11::Connection::Get());
+    ui::GtkUiDelegate::SetInstance(gtk_ui_delegate_.get());
+  }
+#endif
+  views::LinuxUI* linux_ui = BuildGtkUi(ui::GtkUiDelegate::instance());
   views::LinuxUI::SetInstance(linux_ui);
   linux_ui->Initialize();
 
@@ -415,7 +435,9 @@ void ElectronBrowserMainParts::PreMainMessageLoopRun() {
 #endif
 
 #if defined(USE_X11)
-  ui::TouchFactory::SetTouchDeviceListFromCommandLine();
+  if (!features::IsUsingOzonePlatform()) {
+    ui::TouchFactory::SetTouchDeviceListFromCommandLine();
+  }
 #endif
 
   // Start idle gc.
@@ -457,12 +479,18 @@ void ElectronBrowserMainParts::PreDefaultMainMessageLoopRun(
 }
 
 void ElectronBrowserMainParts::PostMainMessageLoopStart() {
-#if defined(USE_X11)
-  // Installs the X11 error handlers for the browser process after the
-  // main message loop has started. This will allow us to exit cleanly
-  // if X exits before us.
-  ui::SetErrorHandlers(
-      base::BindOnce(base::RunLoop::QuitCurrentWhenIdleClosureDeprecated()));
+#if defined(USE_OZONE) || defined(USE_X11)
+  auto shutdown_cb =
+      base::BindOnce(base::RunLoop::QuitCurrentWhenIdleClosureDeprecated());
+  if (features::IsUsingOzonePlatform()) {
+    ui::OzonePlatform::GetInstance()->PostMainMessageLoopStart(
+        std::move(shutdown_cb));
+  } else {
+    // Installs the X11 error handlers for the browser process after the
+    // main message loop has started. This will allow us to exit cleanly
+    // if X exits before us.
+    ui::SetErrorHandlers(std::move(shutdown_cb));
+  }
 #endif
 #if defined(OS_LINUX)
   bluez::DBusBluezManagerWrapperLinux::Initialize();
@@ -473,11 +501,15 @@ void ElectronBrowserMainParts::PostMainMessageLoopStart() {
 }
 
 void ElectronBrowserMainParts::PostMainMessageLoopRun() {
-#if defined(USE_X11)
-  // Unset the X11 error handlers. The X11 error handlers log the errors using a
-  // |PostTask()| on the message-loop. But since the message-loop is in the
-  // process of terminating, this can cause errors.
-  ui::SetEmptyErrorHandlers();
+#if defined(USE_OZONE) || defined(USE_X11)
+  if (features::IsUsingOzonePlatform()) {
+    ui::OzonePlatform::GetInstance()->PostMainMessageLoopRun();
+  } else {
+    // Unset the X11 error handlers. The X11 error handlers log the errors using
+    // a |PostTask()| on the message-loop. But since the message-loop is in the
+    // process of terminating, this can cause errors.
+    ui::SetEmptyErrorHandlers();
+  }
 #endif
 
 #if defined(OS_MAC)
