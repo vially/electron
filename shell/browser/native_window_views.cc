@@ -43,13 +43,17 @@
 #include "ui/wm/core/shadow_types.h"
 #include "ui/wm/core/window_util.h"
 
-#if defined(USE_X11)
+#if defined(OS_LINUX)
 #include "base/strings/string_util.h"
 #include "shell/browser/browser.h"
 #include "shell/browser/linux/unity_service.h"
 #include "shell/browser/ui/views/frameless_view.h"
-#include "shell/browser/ui/views/global_menu_bar_x11.h"
 #include "shell/browser/ui/views/native_frame_view.h"
+#include "ui/views/widget/desktop_aura/desktop_window_tree_host_linux.h"
+#include "ui/views/window/native_frame_view.h"
+
+#if defined(USE_X11)
+#include "shell/browser/ui/views/global_menu_bar_x11.h"
 #include "shell/browser/ui/x/event_disabler.h"
 #include "shell/browser/ui/x/window_state_watcher.h"
 #include "shell/browser/ui/x/x_window_utils.h"
@@ -57,8 +61,12 @@
 #include "ui/gfx/x/shape.h"
 #include "ui/gfx/x/x11_atom_cache.h"
 #include "ui/gfx/x/x11_types.h"
-#include "ui/views/widget/desktop_aura/desktop_window_tree_host_linux.h"
-#include "ui/views/window/native_frame_view.h"
+#endif
+
+#if defined(USE_OZONE) || defined(USE_X11)
+#include "ui/base/ui_base_features.h"
+#endif
+
 #elif defined(OS_WIN)
 #include "base/win/win_util.h"
 #include "shell/browser/ui/views/win_frame_view.h"
@@ -210,9 +218,13 @@ NativeWindowViews::NativeWindowViews(const gin_helper::Dictionary& options,
   std::string window_type;
   options.Get(options::kType, &window_type);
 
+#if defined(OS_LINUX)
 #if defined(USE_X11)
-  // Start monitoring window states.
-  window_state_watcher_ = std::make_unique<WindowStateWatcher>(this);
+  if (!features::IsUsingOzonePlatform()) {
+    // Start monitoring window states.
+    window_state_watcher_ = std::make_unique<WindowStateWatcher>(this);
+  }
+#endif
 
   // Set _GTK_THEME_VARIANT to dark if we have "dark-theme" option set.
   bool use_dark_theme = false;
@@ -220,36 +232,49 @@ NativeWindowViews::NativeWindowViews(const gin_helper::Dictionary& options,
     SetGTKDarkThemeEnabled(use_dark_theme);
   }
 
+#if defined(USE_X11)
   // Before the window is mapped the SetWMSpecState can not work, so we have
   // to manually set the _NET_WM_STATE.
   std::vector<x11::Atom> state_atom_list;
-  bool skip_taskbar = false;
-  if (options.Get(options::kSkipTaskbar, &skip_taskbar) && skip_taskbar) {
-    state_atom_list.push_back(gfx::GetAtom("_NET_WM_STATE_SKIP_TASKBAR"));
-  }
 
-  // Before the window is mapped, there is no SHOW_FULLSCREEN_STATE.
-  if (fullscreen) {
-    state_atom_list.push_back(gfx::GetAtom("_NET_WM_STATE_FULLSCREEN"));
+  if (!features::IsUsingOzonePlatform()) {
+    bool skip_taskbar = false;
+    if (options.Get(options::kSkipTaskbar, &skip_taskbar) && skip_taskbar) {
+      state_atom_list.push_back(gfx::GetAtom("_NET_WM_STATE_SKIP_TASKBAR"));
+    }
+
+    // Before the window is mapped, there is no SHOW_FULLSCREEN_STATE.
+    if (fullscreen) {
+      state_atom_list.push_back(gfx::GetAtom("_NET_WM_STATE_FULLSCREEN"));
+    }
   }
+#endif
 
   if (parent) {
     SetParentWindow(parent);
     // Force using dialog type for child window.
     window_type = "dialog";
-    // Modal window needs the _NET_WM_STATE_MODAL hint.
-    if (is_modal())
-      state_atom_list.push_back(gfx::GetAtom("_NET_WM_STATE_MODAL"));
+#if defined(USE_X11)
+    if (!features::IsUsingOzonePlatform()) {
+      // Modal window needs the _NET_WM_STATE_MODAL hint.
+      if (is_modal())
+        state_atom_list.push_back(gfx::GetAtom("_NET_WM_STATE_MODAL"));
+    }
+#endif
   }
 
-  if (!state_atom_list.empty())
-    ui::SetAtomArrayProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
-                             "_NET_WM_STATE", "ATOM", state_atom_list);
+#if defined(USE_X11)
+  if (!features::IsUsingOzonePlatform()) {
+    if (!state_atom_list.empty())
+      ui::SetAtomArrayProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
+                               "_NET_WM_STATE", "ATOM", state_atom_list);
 
-  // Set the _NET_WM_WINDOW_TYPE.
-  if (!window_type.empty())
-    SetWindowType(static_cast<x11::Window>(GetAcceleratedWidget()),
-                  window_type);
+    // Set the _NET_WM_WINDOW_TYPE.
+    if (!window_type.empty())
+      SetWindowType(static_cast<x11::Window>(GetAcceleratedWidget()),
+                    window_type);
+  }
+#endif
 #endif
 
 #if defined(OS_WIN)
@@ -432,8 +457,14 @@ bool NativeWindowViews::IsVisible() {
 bool NativeWindowViews::IsEnabled() {
 #if defined(OS_WIN)
   return ::IsWindowEnabled(GetAcceleratedWidget());
-#elif defined(USE_X11)
-  return !event_disabler_.get();
+#elif defined(OS_LINUX)
+#if defined(USE_X11)
+  if (!features::IsUsingOzonePlatform()) {
+    return !event_disabler_.get();
+  }
+#endif
+  NOTIMPLEMENTED();
+  return false;
 #endif
 }
 
