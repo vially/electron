@@ -356,14 +356,16 @@ NativeWindowViews::~NativeWindowViews() {
 
 void NativeWindowViews::SetGTKDarkThemeEnabled(bool use_dark_theme) {
 #if defined(USE_X11)
-  if (use_dark_theme) {
-    ui::SetStringProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
-                          gfx::GetAtom("_GTK_THEME_VARIANT"),
-                          gfx::GetAtom("UTF8_STRING"), "dark");
-  } else {
-    ui::SetStringProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
-                          gfx::GetAtom("_GTK_THEME_VARIANT"),
-                          gfx::GetAtom("UTF8_STRING"), "light");
+  if (!features::IsUsingOzonePlatform()) {
+    if (use_dark_theme) {
+      ui::SetStringProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
+                            gfx::GetAtom("_GTK_THEME_VARIANT"),
+                            gfx::GetAtom("UTF8_STRING"), "dark");
+    } else {
+      ui::SetStringProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
+                            gfx::GetAtom("_GTK_THEME_VARIANT"),
+                            gfx::GetAtom("UTF8_STRING"), "light");
+    }
   }
 #endif
 }
@@ -501,15 +503,17 @@ void NativeWindowViews::SetEnabledInternal(bool enable) {
 #if defined(OS_WIN)
   ::EnableWindow(GetAcceleratedWidget(), enable);
 #elif defined(USE_X11)
-  views::DesktopWindowTreeHostPlatform* tree_host =
-      views::DesktopWindowTreeHostLinux::GetHostForWidget(
-          GetAcceleratedWidget());
-  if (enable) {
-    tree_host->RemoveEventRewriter(event_disabler_.get());
-    event_disabler_.reset();
-  } else {
-    event_disabler_ = std::make_unique<EventDisabler>();
-    tree_host->AddEventRewriter(event_disabler_.get());
+  if (!features::IsUsingOzonePlatform()) {
+    views::DesktopWindowTreeHostPlatform* tree_host =
+        views::DesktopWindowTreeHostLinux::GetHostForWidget(
+            GetAcceleratedWidget());
+    if (enable) {
+      tree_host->RemoveEventRewriter(event_disabler_.get());
+      event_disabler_.reset();
+    } else {
+      event_disabler_ = std::make_unique<EventDisabler>();
+      tree_host->AddEventRewriter(event_disabler_.get());
+    }
   }
 #endif
 }
@@ -706,11 +710,13 @@ bool NativeWindowViews::MoveAbove(const std::string& sourceId) {
                  0, 0, 0,
                  SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 #elif defined(USE_X11)
-  if (!IsWindowValid(static_cast<x11::Window>(id.id)))
-    return false;
+  if (!features::IsUsingOzonePlatform()) {
+    if (!IsWindowValid(static_cast<x11::Window>(id.id)))
+      return false;
 
-  electron::MoveWindowAbove(static_cast<x11::Window>(GetAcceleratedWidget()),
-                            static_cast<x11::Window>(id.id));
+    electron::MoveWindowAbove(static_cast<x11::Window>(GetAcceleratedWidget()),
+                              static_cast<x11::Window>(id.id));
+  }
 #endif
 
   return true;
@@ -726,8 +732,10 @@ void NativeWindowViews::MoveTop() {
                  size.width(), size.height(),
                  SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 #elif defined(USE_X11)
-  electron::MoveWindowToForeground(
-      static_cast<x11::Window>(GetAcceleratedWidget()));
+  if (!features::IsUsingOzonePlatform()) {
+    electron::MoveWindowToForeground(
+        static_cast<x11::Window>(GetAcceleratedWidget()));
+  }
 #endif
 }
 
@@ -912,8 +920,10 @@ void NativeWindowViews::SetSkipTaskbar(bool skip) {
     taskbar_host_.RestoreThumbarButtons(GetAcceleratedWidget());
   }
 #elif defined(USE_X11)
-  SetWMSpecState(static_cast<x11::Window>(GetAcceleratedWidget()), skip,
-                 gfx::GetAtom("_NET_WM_STATE_SKIP_TASKBAR"));
+  if (!features::IsUsingOzonePlatform()) {
+    SetWMSpecState(static_cast<x11::Window>(GetAcceleratedWidget()), skip,
+                   gfx::GetAtom("_NET_WM_STATE_SKIP_TASKBAR"));
+  }
 #endif
 }
 
@@ -1011,23 +1021,27 @@ void NativeWindowViews::SetIgnoreMouseEvents(bool ignore, bool forward) {
     SetForwardMouseMessages(forward);
   }
 #elif defined(USE_X11)
-  auto* connection = x11::Connection::Get();
-  if (ignore) {
-    x11::Rectangle r{0, 0, 1, 1};
-    connection->shape().Rectangles({
-        .operation = x11::Shape::So::Set,
-        .destination_kind = x11::Shape::Sk::Input,
-        .ordering = x11::ClipOrdering::YXBanded,
-        .destination_window = static_cast<x11::Window>(GetAcceleratedWidget()),
-        .rectangles = {r},
-    });
-  } else {
-    connection->shape().Mask({
-        .operation = x11::Shape::So::Set,
-        .destination_kind = x11::Shape::Sk::Input,
-        .destination_window = static_cast<x11::Window>(GetAcceleratedWidget()),
-        .source_bitmap = x11::Pixmap::None,
-    });
+  if (!features::IsUsingOzonePlatform()) {
+    auto* connection = x11::Connection::Get();
+    if (ignore) {
+      x11::Rectangle r{0, 0, 1, 1};
+      connection->shape().Rectangles({
+          .operation = x11::Shape::So::Set,
+          .destination_kind = x11::Shape::Sk::Input,
+          .ordering = x11::ClipOrdering::YXBanded,
+          .destination_window =
+              static_cast<x11::Window>(GetAcceleratedWidget()),
+          .rectangles = {r},
+      });
+    } else {
+      connection->shape().Mask({
+          .operation = x11::Shape::So::Set,
+          .destination_kind = x11::Shape::Sk::Input,
+          .destination_window =
+              static_cast<x11::Window>(GetAcceleratedWidget()),
+          .source_bitmap = x11::Pixmap::None,
+      });
+    }
   }
 #endif
 }
@@ -1055,21 +1069,23 @@ void NativeWindowViews::SetFocusable(bool focusable) {
 
 void NativeWindowViews::SetMenu(ElectronMenuModel* menu_model) {
 #if defined(USE_X11)
-  // Remove global menu bar.
-  if (global_menu_bar_ && menu_model == nullptr) {
-    global_menu_bar_.reset();
-    root_view_->UnregisterAcceleratorsWithFocusManager();
-    return;
-  }
-
-  // Use global application menu bar when possible.
-  if (ShouldUseGlobalMenuBar()) {
-    if (!global_menu_bar_)
-      global_menu_bar_ = std::make_unique<GlobalMenuBarX11>(this);
-    if (global_menu_bar_->IsServerStarted()) {
-      root_view_->RegisterAcceleratorsWithFocusManager(menu_model);
-      global_menu_bar_->SetMenu(menu_model);
+  if (!features::IsUsingOzonePlatform()) {
+    // Remove global menu bar.
+    if (global_menu_bar_ && menu_model == nullptr) {
+      global_menu_bar_.reset();
+      root_view_->UnregisterAcceleratorsWithFocusManager();
       return;
+    }
+
+    // Use global application menu bar when possible.
+    if (ShouldUseGlobalMenuBar()) {
+      if (!global_menu_bar_)
+        global_menu_bar_ = std::make_unique<GlobalMenuBarX11>(this);
+      if (global_menu_bar_->IsServerStarted()) {
+        root_view_->RegisterAcceleratorsWithFocusManager(menu_model);
+        global_menu_bar_->SetMenu(menu_model);
+        return;
+      }
     }
   }
 #endif
@@ -1135,11 +1151,13 @@ void NativeWindowViews::SetParentWindow(NativeWindow* parent) {
   NativeWindow::SetParentWindow(parent);
 
 #if defined(USE_X11)
-  ui::SetProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
-                  x11::Atom::WM_TRANSIENT_FOR, x11::Atom::WINDOW,
-                  parent
-                      ? static_cast<x11::Window>(parent->GetAcceleratedWidget())
-                      : ui::GetX11RootWindow());
+  if (!features::IsUsingOzonePlatform()) {
+    ui::SetProperty(
+        static_cast<x11::Window>(GetAcceleratedWidget()),
+        x11::Atom::WM_TRANSIENT_FOR, x11::Atom::WINDOW,
+        parent ? static_cast<x11::Window>(parent->GetAcceleratedWidget())
+               : ui::GetX11RootWindow());
+  }
 #elif defined(OS_WIN)
   // To set parentship between windows into Windows is better to play with the
   //  owner instead of the parent, as Windows natively seems to do if a parent
@@ -1214,14 +1232,16 @@ void NativeWindowViews::SetVisibleOnAllWorkspaces(bool visible,
 
 bool NativeWindowViews::IsVisibleOnAllWorkspaces() {
 #if defined(USE_X11)
-  // Use the presence/absence of _NET_WM_STATE_STICKY in _NET_WM_STATE to
-  // determine whether the current window is visible on all workspaces.
-  x11::Atom sticky_atom = gfx::GetAtom("_NET_WM_STATE_STICKY");
-  std::vector<x11::Atom> wm_states;
-  ui::GetAtomArrayProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
-                           "_NET_WM_STATE", &wm_states);
-  return std::find(wm_states.begin(), wm_states.end(), sticky_atom) !=
-         wm_states.end();
+  if (!features::IsUsingOzonePlatform()) {
+    // Use the presence/absence of _NET_WM_STATE_STICKY in _NET_WM_STATE to
+    // determine whether the current window is visible on all workspaces.
+    x11::Atom sticky_atom = gfx::GetAtom("_NET_WM_STATE_STICKY");
+    std::vector<x11::Atom> wm_states;
+    ui::GetAtomArrayProperty(static_cast<x11::Window>(GetAcceleratedWidget()),
+                             "_NET_WM_STATE", &wm_states);
+    return std::find(wm_states.begin(), wm_states.end(), sticky_atom) !=
+           wm_states.end();
+  }
 #endif
   return false;
 }
