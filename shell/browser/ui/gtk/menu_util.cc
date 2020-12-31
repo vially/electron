@@ -42,6 +42,7 @@ int EventFlagsFromGdkState(guint state) {
   return flags;
 }
 
+#if defined(USE_X11)
 guint GetGdkKeyCodeForAccelerator(const ui::Accelerator& accelerator) {
   // The second parameter is false because accelerator keys are expressed in
   // terms of the non-shift-modified key.
@@ -60,6 +61,7 @@ GdkModifierType GetGdkModifierForAccelerator(
     modifier |= GDK_MOD1_MASK;
   return static_cast<GdkModifierType>(modifier);
 }
+#endif
 
 }  // namespace
 
